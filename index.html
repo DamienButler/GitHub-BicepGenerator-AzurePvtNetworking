@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Private Networking Bicep Generator</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <svg class="github-icon" viewBox="0 0 24 24" width="40" height="40" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+                <div>
+                    <h1>Bicep File Generator</h1>
+                    <p class="subtitle">Generate Azure Private Networking NSG Bicep files for GitHub-hosted runners</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <span class="status-dot connected"></span>
+                <span>Ready</span>
+            </div>
+        </header>
+
+        <!-- Configuration Section -->
+        <section class="search-section">
+            <h2 class="section-title">Configuration</h2>
+            <div class="config-form">
+                <div class="config-group">
+                    <label class="config-label">Platform</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="platform" value="github.com" checked>
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">GitHub.com</span>
+                            <span class="radio-desc">Standard GitHub Enterprise Cloud</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="platform" value="ghecom">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">GHE.com (Data Residency)</span>
+                            <span class="radio-desc">GitHub Enterprise with data residency</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="config-group hidden" id="region-group">
+                    <label class="config-label">Data Residency Region</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="region" value="eu" checked>
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">EU</span>
+                            <span class="radio-desc">France Central, Sweden Central, Germany West Central, North Europe</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="region" value="australia">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Australia</span>
+                            <span class="radio-desc">Australia East, Australia Central</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="region" value="us">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">US</span>
+                            <span class="radio-desc">Central US, East US 2, West US 3</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="region" value="japan">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Japan</span>
+                            <span class="radio-desc">Japan East, Japan West</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="generate-btn" class="search-btn">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                    <span>Generate & Download Bicep File</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Preview Section -->
+        <section id="preview-section" class="results-section hidden">
+            <div id="preview-container"></div>
+        </section>
+
+        <!-- Tabs Section -->
+        <section class="tabs-section">
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="details">IP Details</button>
+                <button class="tab-btn" data-tab="updates">Recent Updates</button>
+                <button class="tab-btn" data-tab="docs">Documentation</button>
+            </div>
+
+            <!-- Details Tab -->
+            <div id="details-tab" class="tab-content active">
+                <div class="services-grid" id="details-grid">
+                    <div class="details-placeholder">
+                        <p>Select a platform above and click <strong>Generate</strong> to see the IP ranges that will be included in your Bicep file.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Updates Tab -->
+            <div id="updates-tab" class="tab-content">
+                <div id="updates-container">
+                    <div class="no-updates">
+                        <div class="no-updates-icon">📋</div>
+                        <p><strong>No updates recorded yet</strong></p>
+                        <p style="margin-top: 8px; font-size: 0.8125rem;">
+                            The daily monitoring workflow will begin tracking changes to the GitHub docs once configured.<br>
+                            Updates will appear here showing added or removed IP ranges from the bicep prerequisites and GHE.com network details pages.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Docs Tab -->
+            <div id="docs-tab" class="tab-content">
+                <div class="info-section" style="margin-bottom: 0;">
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 16v-4M12 8h.01"/>
+                            </svg>
+                        </div>
+                        <div class="info-content">
+                            <h3>What is this?</h3>
+                            <p>
+                                This tool generates the <code>actions-nsg-deployment.bicep</code> file required when configuring 
+                                <a href="https://docs.github.com/en/enterprise-cloud@latest/admin/configuring-settings/configuring-private-networking-for-hosted-compute-products/configuring-private-networking-for-github-hosted-runners-in-your-enterprise" target="_blank" rel="noopener noreferrer">Azure private networking for GitHub-hosted runners</a>. 
+                                The generated file contains the Network Security Group (NSG) rules needed to allow outbound connectivity from your Azure VNET.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                        </div>
+                        <div class="info-content">
+                            <h3>Data Residency (GHE.com)</h3>
+                            <p>
+                                If you use <strong>GitHub Enterprise Cloud with data residency</strong>, your Bicep file requires additional 
+                                IP ranges specific to your region. This tool automatically adds the correct Actions IPs and regional ingress 
+                                IPs to the <code>AllowOutBoundGitHub</code> section of the NSG rules. 
+                                See <a href="https://docs.github.com/en/enterprise-cloud@latest/admin/data-residency/network-details-for-ghecom" target="_blank" rel="noopener noreferrer">Network details for GHE.com</a> for more information.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                <polyline points="22,6 12,13 2,6"/>
+                            </svg>
+                        </div>
+                        <div class="info-content">
+                            <h3>How to Use</h3>
+                            <p>
+                                1. Select your platform — <strong>GitHub.com</strong> or <strong>GHE.com</strong> (data residency).<br>
+                                2. If using GHE.com, choose your data residency region.<br>
+                                3. Click <strong>Generate & Download</strong> to download the <code>actions-nsg-deployment.bicep</code> file.<br>
+                                4. Use the file with the Azure CLI deployment script as described in the 
+                                <a href="https://docs.github.com/en/enterprise-cloud@latest/admin/configuring-settings/configuring-private-networking-for-hosted-compute-products/configuring-private-networking-for-github-hosted-runners-in-your-enterprise#2-use-a-script-to-configure-your-azure-resources" target="_blank" rel="noopener noreferrer">prerequisites documentation</a>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>
+                Built with ♥ — Hosted on GitHub Pages — 
+                <a href="https://docs.github.com/en/enterprise-cloud@latest/admin/configuring-settings/configuring-private-networking-for-hosted-compute-products/configuring-private-networking-for-github-hosted-runners-in-your-enterprise" target="_blank" rel="noopener noreferrer">Azure Private Networking Docs</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
