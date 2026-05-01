@@ -168,6 +168,15 @@
         }
     };
 
+    // ===== Expose shared data for the validator (js/validator.js) =====
+    // Small refactor: validator reuses these source-of-truth arrays so we never
+    // duplicate range data between the generator and the validator.
+    window.BicepData = Object.freeze({
+        BASE_ACTIONS_IPS,
+        BASE_GITHUB_IPS,
+        REGION_DATA
+    });
+
     // ===== DOM =====
     const generateBtn = document.getElementById('generate-btn');
     const regionGroup = document.getElementById('region-group');
@@ -277,6 +286,20 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById(`${btn.dataset.tab}-tab`).classList.add('active');
+        });
+    });
+
+    // Top-level view switcher (Generate Bicep / Validate Existing Config)
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.view-btn').forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-selected', 'false');
+            });
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            btn.classList.add('active');
+            btn.setAttribute('aria-selected', 'true');
+            document.getElementById(`${btn.dataset.view}-view`).classList.add('active');
         });
     });
 

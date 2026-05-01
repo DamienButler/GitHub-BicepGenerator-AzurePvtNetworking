@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CIDR Utils Tests</title>
+<style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0d1117; color: #e6edf3; padding: 24px; }
+    h1 { margin-bottom: 16px; }
+    .pass { color: #3fb950; }
+    .fail { color: #f85149; }
+    table { border-collapse: collapse; width: 100%; }
+    td { padding: 4px 10px; border-bottom: 1px solid #30363d; font-family: monospace; font-size: 13px; }
+    .summary { margin-top: 18px; font-weight: 700; font-size: 18px; }
+</style>
+</head>
+<body>
+<h1>CIDR Utils — Tests</h1>
+<table id="results"></table>
+<div class="summary" id="summary"></div>
+
+<!-- The validator script attaches window.CidrUtils. We don't need app.js because
+     these tests only exercise pure helpers. -->
+<script src="../js/validator.js"></script>
+<script>
+(function () {
+    const { ipToInt, isValidIPv4, parseCIDR, cidrContains, ipInCidr, extractCidrs } = window.CidrUtils;
+    const tbody = document.getElementById('results');
+    let passed = 0, failed = 0;
+
+    function t(name, actual, expected) {
+        const ok = JSON.stringify(actual) === JSON.stringify(expected);
+        if (ok) passed++; else failed++;
+        const row = document.createElement('tr');
+        row.innerHTML = `<td class="${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td>` +
+                        `<td>${name}</td>` +
+                        `<td>${ok ? '' : 'got ' + JSON.stringify(actual) + ' expected ' + JSON.stringify(expected)}</td>`;
+        tbody.appendChild(row);
+    }
+
+    // ipToInt
+    t('ipToInt 0.0.0.0',         ipToInt('0.0.0.0'), 0);
+    t('ipToInt 255.255.255.255', ipToInt('255.255.255.255'), 4294967295);
+    t('ipToInt 192.168.1.1',     ipToInt('192.168.1.1'), 3232235777);
+    t('ipToInt invalid',         ipToInt('999.0.0.0'), null);
+    t('ipToInt malformed',       ipToInt('1.2.3'), null);
+
+    // isValidIPv4
+    t('isValidIPv4 valid',   isValidIPv4('20.123.213.96'), true);
+    t('isValidIPv4 invalid', isValidIPv4('20.123.213.999'), false);
+
+    // parseCIDR
+    t('parseCIDR /24 network', parseCIDR('192.168.1.55/24').network, ipToInt('192.168.1.0'));
+    t('parseCIDR /28 size',    parseCIDR('20.123.213.96/28').size, 16);
+    t('parseCIDR /32',         parseCIDR('1.2.3.4/32').broadcast, ipToInt('1.2.3.4'));
+    t('parseCIDR /0 size',     parseCIDR('0.0.0.0/0').size, 4294967296);
+    t('parseCIDR bad prefix',  parseCIDR('1.2.3.4/33'), null);
+    t('parseCIDR no slash',    parseCIDR('1.2.3.4'), null);
+
+    // cidrContains
+    t('contains: /27 contains /28',         cidrContains('20.123.213.96/27', '20.123.213.96/28'), true);
+    t('contains: /28 contains /28 (exact)', cidrContains('20.123.213.96/28', '20.123.213.96/28'), true);
+    t('contains: /28 NOT contains /27',     cidrContains('20.123.213.96/28', '20.123.213.96/27'), false);
+    t('contains: /16 contains /24',         cidrContains('10.0.0.0/16', '10.0.5.0/24'), true);
+    t('contains: disjoint',                 cidrContains('10.0.0.0/24', '10.0.1.0/24'), false);
+    t('contains: /0 contains anything',     cidrContains('0.0.0.0/0', '8.8.8.8/32'), true);
+
+    // ipInCidr
+    t('ipInCidr inside',   ipInCidr('20.123.213.100', '20.123.213.96/28'), true);
+    t('ipInCidr edge low', ipInCidr('20.123.213.96',  '20.123.213.96/28'), true);
+    t('ipInCidr edge hi',  ipInCidr('20.123.213.111', '20.123.213.96/28'), true);
+    t('ipInCidr outside',  ipInCidr('20.123.213.112', '20.123.213.96/28'), false);
+    t('ipInCidr bad ip',   ipInCidr('not-an-ip',      '20.123.213.96/28'), false);
+
+    // extractCidrs - cidr mode
+    {
+        const r = extractCidrs('1.2.3.0/24\n  10.0.0.0/8 ,  192.168.1.0/24\n\nbogus', 'cidr');
+        t('extract cidr mode valid count',   r.valid.length, 3);
+        t('extract cidr mode invalid count', r.invalid.length, 1);
+        t('extract cidr mode invalid item',  r.invalid[0], 'bogus');
+    }
+
+    // extractCidrs - bicep mode (extract from messy bicep text)
+    {
+        const bicep = `destinationAddressPrefixes: [
+            '20.123.213.96/28'
+            '108.143.197.176/28'
+            'Storage'
+            '4.237.73.192/28'
+        ]`;
+        const r = extractCidrs(bicep, 'bicep');
+        t('extract bicep count', r.valid.length, 3);
+        t('extract bicep contains EU', r.valid.includes('20.123.213.96/28'), true);
+    }
+
+    // extractCidrs - bicep mode dedupes
+    {
+        const r = extractCidrs("'1.2.3.4/32' '1.2.3.4/32' '5.6.7.8/32'", 'bicep');
+        t('extract bicep dedupes', r.valid.length, 2);
+    }
+
+    document.getElementById('summary').innerHTML =
+        `<span class="${failed === 0 ? 'pass' : 'fail'}">${passed} passed, ${failed} failed</span>`;
+})();
+</script>
+</body>
+</html>

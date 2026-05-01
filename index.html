@@ -26,6 +26,21 @@
             </div>
         </header>
 
+        <!-- Top-level View Switcher -->
+        <nav class="view-switcher" role="tablist" aria-label="Primary">
+            <button class="view-btn active" data-view="generator" role="tab" aria-selected="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Generate Bicep
+            </button>
+            <button class="view-btn" data-view="validator" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Validate Existing Config
+            </button>
+        </nav>
+
+        <!-- ===================== GENERATOR VIEW ===================== -->
+        <div id="generator-view" class="view active">
+
         <!-- Configuration Section -->
         <section class="search-section">
             <h2 class="section-title">Configuration</h2>
@@ -180,7 +195,111 @@
             </div>
         </section>
 
-        <!-- Footer -->
+        </div><!-- /#generator-view -->
+
+        <!-- ===================== VALIDATOR VIEW ===================== -->
+        <div id="validator-view" class="view">
+            <section class="search-section">
+                <h2 class="section-title">Validate Existing Config</h2>
+                <p class="privacy-note">
+                    🔒 Validation runs <strong>locally in your browser</strong>. Do not paste secrets, tokens, or private credentials.
+                </p>
+
+                <div class="config-form">
+                    <div class="config-group">
+                        <label class="config-label">Platform</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="v-platform" value="github.com" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">GitHub.com</span>
+                                <span class="radio-desc">Standard GitHub Enterprise Cloud</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="v-platform" value="ghecom">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">GHE.com (Data Residency)</span>
+                                <span class="radio-desc">GitHub Enterprise with data residency</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="config-group hidden" id="v-region-group">
+                        <label class="config-label">Data Residency Region</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="v-region" value="eu" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">EU</span>
+                                <span class="radio-desc">France Central, Sweden Central, Germany West Central, North Europe</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="v-region" value="australia">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Australia</span>
+                                <span class="radio-desc">Australia East, Australia Central</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="v-region" value="us">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">US</span>
+                                <span class="radio-desc">Central US, East US 2, West US 3</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="v-region" value="japan">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Japan</span>
+                                <span class="radio-desc">Japan East, Japan West</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="config-group">
+                        <label class="config-label">Configuration Input Type</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="v-input-type" value="cidr" checked>
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Paste CIDR list</span>
+                                <span class="radio-desc">One CIDR per line, or comma-separated</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="v-input-type" value="bicep">
+                                <span class="radio-custom"></span>
+                                <span class="radio-text">Paste Bicep</span>
+                                <span class="radio-desc">All IPv4 CIDRs will be extracted from the file</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="config-group">
+                        <label class="config-label" for="v-config-input">Pasted Configuration</label>
+                        <textarea id="v-config-input" class="validator-textarea" rows="10" spellcheck="false"
+                            placeholder="Paste your CIDR list or Bicep file content here..."></textarea>
+                    </div>
+
+                    <div class="config-group">
+                        <label class="config-label" for="v-blocked-input">
+                            Blocked IPs <span class="config-label-optional">(optional)</span>
+                        </label>
+                        <textarea id="v-blocked-input" class="validator-textarea" rows="4" spellcheck="false"
+                            placeholder="Optional: paste blocked IPv4 addresses from firewall/proxy logs (one per line)"></textarea>
+                    </div>
+
+                    <button id="validate-btn" class="search-btn">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 12l2 2 4-4"/>
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <span>Validate Configuration</span>
+                    </button>
+                </div>
+            </section>
+
+            <section id="v-results-section" class="results-section hidden">
+                <div id="v-results-container"></div>
+            </section>
+        </div><!-- /#validator-view -->
         <footer class="app-footer">
             <p>
                 Built with ♥ — Hosted on GitHub Pages — 
@@ -190,5 +309,6 @@
     </div>
 
     <script src="js/app.js"></script>
+    <script src="js/validator.js"></script>
 </body>
 </html>
