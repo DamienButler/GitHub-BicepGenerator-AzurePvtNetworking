@@ -1,5 +1,85 @@
 [
   {
+    "date": "2026-05-01",
+    "changes": [
+      {
+        "type": "added",
+        "range": "108.143.221.96/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.61.46.32/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.224.62.160/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "51.12.252.16/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "74.241.131.48/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.240.211.176/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.5.34.240/28",
+        "source": "Australia Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.5.146.128/28",
+        "source": "Australia Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "68.218.155.16/28",
+        "source": "Australia Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "74.226.88.192/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "74.226.88.240/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "40.81.180.112/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "40.81.176.224/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "4.190.169.192/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "4.190.169.240/28",
+        "source": "Japan Region IPs"
+      }
+    ]
+  },
+  {
     "date": "2026-04-22",
     "changes": [
       {

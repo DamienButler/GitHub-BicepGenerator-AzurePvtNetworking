@@ -309,6 +309,26 @@
         return `GHE.com — ${data ? data.name : region}`;
     }
 
+    /**
+     * Surface a notice when the selected GHE.com region has no `actionsIPs`
+     * documented (e.g. US today). Without this, "0 missing" looks like a pass
+     * when in fact one bucket simply wasn't checked.
+     */
+    function renderRegionDataNotice(platform, region) {
+        if (platform !== 'ghecom') return '';
+        const r = window.BicepData?.REGION_DATA?.[region];
+        if (!r) return '';
+        const notes = [];
+        if (r.actionsIPs.length === 0) {
+            notes.push(`No region-specific <strong>Actions IPs</strong> are currently documented for <strong>${escapeHTML(r.name)}</strong>.`);
+        }
+        if (r.regionIPs.length === 0) {
+            notes.push(`No region-specific <strong>ingress IPs</strong> are currently documented for <strong>${escapeHTML(r.name)}</strong>.`);
+        }
+        if (!notes.length) return '';
+        return `<div class="v-notice">ℹ️ ${notes.join(' ')} Validation only checked the base IP sets and any populated region buckets.</div>`;
+    }
+
     function renderResults(ctx) {
         const { platform, region, required, customerCidrs, invalidEntries, result, blocked } = ctx;
         const totalRequired = required.length;
@@ -339,6 +359,7 @@
                 </div>
             </div>
             <div class="result-body">
+                ${renderRegionDataNotice(platform, region)}
                 <div class="v-stats">
                     <div class="v-stat"><span class="v-stat-label">Required</span><span class="v-stat-value">${totalRequired}</span></div>
                     <div class="v-stat ${coveredCount ? 'ok' : ''}"><span class="v-stat-label">Covered</span><span class="v-stat-value">${coveredCount}</span></div>

@@ -928,6 +928,17 @@ code {
 .v-pill.info    { background: rgba(88, 166, 255, 0.18); color: var(--accent-blue); }
 .v-pill.neutral { background: var(--bg-primary);         color: var(--text-tertiary); }
 
+.v-notice {
+    background: rgba(88, 166, 255, 0.08);
+    border: 1px solid rgba(88, 166, 255, 0.35);
+    color: var(--text-secondary);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    font-size: 0.875rem;
+}
+.v-notice strong { color: var(--text-primary); }
+
 /* ===== Responsive ===== */
 @media (max-width: 640px) {
     .app-header {

@@ -26,13 +26,31 @@ const GHE_NETWORK_PAGE = 'https://docs.github.com/en/enterprise-cloud@latest/adm
 // ===== Helpers =====
 
 function extractIPsFromText(text) {
-    // Match IPv4 addresses and CIDR ranges
-    const ipv4Regex = /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d{1,2})?)\b/g;
-    const matches = text.match(ipv4Regex) || [];
-    // Filter out things that aren't valid IPs (e.g. version numbers)
+    // Match IPv4 addresses and CIDR ranges. Two challenges with the rendered
+    // docs page text:
+    //
+    //  1. Cheerio concatenates table cells without separators
+    //     (e.g. ".../28108.143..."). We pre-inject a space when a CIDR
+    //     prefix is immediately followed by what looks like the start of
+    //     ANOTHER IP. Constraining the lookahead to `\d{1,3}\.` prevents
+    //     the greedy `\d{1,2}` from backtracking and chopping legit prefixes
+    //     like `/32'` (must NOT become `/3 2'`).
+    //
+    //  2. Cells are sometimes glued onto trailing label text (e.g.
+    //     "ingress traffic20.5.34.240/28..."). A simple `\b` boundary
+    //     fails here because both `c` and `2` are word characters, so the
+    //     first IP would be silently skipped. We use a lookbehind that
+    //     excludes only `[\d.]` instead — that's the only context where a
+    //     leading digit could legitimately be part of a longer IP.
+    const separated = text.replace(/(\/\d{1,2})(?=\d{1,3}\.)/g, '$1 ');
+    const ipv4Regex = /(?<![\d.])\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d{1,2})?(?![\d.])/g;
+    const matches = separated.match(ipv4Regex) || [];
     return [...new Set(matches.filter(ip => {
         const parts = ip.split('/')[0].split('.');
-        return parts.every(p => parseInt(p) <= 255);
+        if (!parts.every(p => /^\d+$/.test(p) && parseInt(p, 10) <= 255)) return false;
+        const slash = ip.split('/')[1];
+        if (slash !== undefined && parseInt(slash, 10) > 32) return false;
+        return true;
     }))];
 }
 
@@ -89,9 +107,6 @@ async function scrapeGHENetworkPage() {
     const $ = cheerio.load(html);
 
     const regions = {};
-    const fullText = $('body').text();
-
-    // Parse each region's Azure private networking IPs
     const regionConfigs = [
         { key: 'eu', name: 'EU' },
         { key: 'australia', name: 'Australia' },
@@ -99,16 +114,29 @@ async function scrapeGHENetworkPage() {
         { key: 'us', name: 'US' }
     ];
 
-    // Find the "IP ranges for Azure private networking" section
-    // We'll parse the text content looking for region headers and IP lists
-    const sections = $('h4').toArray();
+    // ---- Pass 1: "IP ranges for Azure private networking" subsection ----
+    // The page has multiple h4 region headings (also under "Domains for Azure
+    // private networking"). To avoid clobbering, walk only the h4s that sit
+    // between the "IP ranges for Azure private networking" h3 and the next h3.
+    const ipRangesH3 = $('h3').filter((_, el) =>
+        /IP ranges for Azure private networking/i.test($(el).text())
+    ).first();
 
-    for (const section of sections) {
+    const scopedH4s = [];
+    if (ipRangesH3.length) {
+        let cur = ipRangesH3.next();
+        while (cur.length && cur.prop('tagName') !== 'H3') {
+            if (cur.prop('tagName') === 'H4') scopedH4s.push(cur.get(0));
+            cur = cur.next();
+        }
+    }
+
+    for (const section of scopedH4s) {
         const heading = $(section).text().trim();
         const config = regionConfigs.find(r => r.name === heading || heading.startsWith(r.name));
         if (!config) continue;
 
-        // Collect text from siblings until next h4 or h3
+        // Collect text from siblings until next h3/h4
         let text = '';
         let next = $(section).next();
         while (next.length && !['H3', 'H4'].includes(next.prop('tagName'))) {
@@ -116,21 +144,83 @@ async function scrapeGHENetworkPage() {
             next = next.next();
         }
 
-        // Look for Actions IPs and Region IPs
         const actionsMatch = text.match(/Actions\s+IPs?:?\s*([\s\S]*?)(?:region|$)/i);
         const regionMatch = text.match(/region:?\s*([\s\S]*?)$/i);
-
         const actionsIPs = actionsMatch ? extractIPsFromText(actionsMatch[1]) : [];
         const regionIPs = regionMatch ? extractIPsFromText(regionMatch[1]) : [];
 
-        // Ensure /32 suffix on single IPs
         regions[config.key] = {
             name: config.name,
             actionsIPs: actionsIPs.map(ip => ip.includes('/') ? ip : `${ip}/32`),
             regionIPs: regionIPs.map(ip => ip.includes('/') ? ip : `${ip}/32`)
         };
+        console.log(`  [private-networking] ${config.name}: ${actionsIPs.length} Actions, ${regionIPs.length} Region IPs`);
+    }
 
-        console.log(`  ${config.name}: ${actionsIPs.length} Actions IPs, ${regionIPs.length} Region IPs`);
+    // ---- Pass 2: "GitHub's IP addresses" section (h3 + per-region h3) ----
+    // This is where the US ranges live, and where extra EU/AU/JP ranges appear
+    // that aren't repeated in the private-networking subsection. We MERGE into
+    // the existing region.regionIPs (deduped) so we don't lose either set.
+    //
+    // The page nests headings in different DOM containers from their content,
+    // so DOM-tree traversal is unreliable. Instead, take a flattened text view
+    // of the body and slice between heading boundaries by text.
+    //
+    // IMPORTANT: strip <script> contents first. The page embeds a Next.js
+    // JSON payload that includes raw escape-sequence text like "\u003eThe EU"
+    // — those characters become real characters in `.text()` and break our
+    // word-boundary anchors (`\b`) by gluing word chars onto our markers.
+    $('script, style, noscript').remove();
+    const bodyText = $('body').text();
+    const findAll = (re) => {
+        const out = [];
+        const r = new RegExp(re.source, re.flags.replace('g', '') + 'g');
+        let m; while ((m = r.exec(bodyText))) out.push(m.index);
+        return out;
+    };
+    const startIdxs = findAll(/GitHub's IP addresses/i);
+    const endIdxs   = findAll(/Supported regions for Azure private networking/i);
+    // For each start, pair it with the *immediately-following* end (natural
+    // section span). Then pick the pair with the largest gap — TOC and footer
+    // pairs have small gaps; the real content pair is much larger.
+    let ghIpsStart = -1, ghIpsEnd = -1, bestGap = 0;
+    for (const s of startIdxs) {
+        const e = endIdxs.find(x => x > s);
+        if (e !== undefined && (e - s) > bestGap) {
+            bestGap = e - s;
+            ghIpsStart = s;
+            ghIpsEnd = e;
+        }
+    }
+
+    if (ghIpsStart >= 0 && ghIpsEnd > ghIpsStart) {
+        const section = bodyText.slice(ghIpsStart, ghIpsEnd);
+        // Region headings inside this section appear as standalone words
+        // ("The EU", "Australia", "US", "Japan") in document order.
+        const markers = [
+            { key: 'eu',        re: /\bThe\s+EU\b/i },
+            { key: 'australia', re: /\bAustralia\b/i },
+            { key: 'us',        re: /\bUS\b/ },
+            { key: 'japan',     re: /\bJapan\b/i }
+        ];
+        const found = markers
+            .map(m => ({ ...m, idx: section.search(m.re) }))
+            .filter(m => m.idx >= 0)
+            .sort((a, b) => a.idx - b.idx);
+
+        for (let i = 0; i < found.length; i++) {
+            const start = found[i].idx;
+            const end = i + 1 < found.length ? found[i + 1].idx : section.length;
+            const chunk = section.slice(start, end);
+            const ips = extractIPsFromText(chunk).map(ip => ip.includes('/') ? ip : `${ip}/32`);
+            const cfg = regionConfigs.find(r => r.key === found[i].key);
+            if (!regions[cfg.key]) {
+                regions[cfg.key] = { name: cfg.name, actionsIPs: [], regionIPs: [] };
+            }
+            const merged = new Set([...regions[cfg.key].regionIPs, ...ips]);
+            regions[cfg.key].regionIPs = [...merged];
+            console.log(`  [github-ips]          ${cfg.name}: ${ips.length} IPs (merged → ${regions[cfg.key].regionIPs.length} total)`);
+        }
     }
 
     return regions;
@@ -192,6 +282,46 @@ function compareSnapshots(oldSnap, newSnap) {
 }
 
 // ===== Update app.js =====
+
+/**
+ * Safety check: refuse to overwrite good data with empty data — and refuse
+ * suspicious shrinkage (>50% loss). If a previously-populated array would
+ * become empty or shrink dramatically, we abort and keep the last-known-good
+ * snapshot. Returns a list of error messages (empty = OK).
+ */
+function detectDataLoss(oldSnap, newSnap) {
+    const errors = [];
+    const SHRINK_THRESHOLD = 0.5; // refuse if new size < 50% of old
+
+    const checkArray = (label, oldArr, newArr) => {
+        const oldN = oldArr?.length || 0;
+        const newN = newArr?.length || 0;
+        if (oldN > 0 && newN === 0) {
+            errors.push(`${label} would be emptied (${oldN} → 0)`);
+        } else if (oldN >= 4 && newN < oldN * SHRINK_THRESHOLD) {
+            // Only flag suspicious shrinkage on lists with at least 4 entries
+            // (small lists can legitimately churn a lot).
+            errors.push(`${label} would shrink suspiciously (${oldN} → ${newN})`);
+        }
+    };
+
+    checkArray('BASE_ACTIONS_IPS', oldSnap.actionsIPs, newSnap.actionsIPs);
+    checkArray('BASE_GITHUB_IPS', oldSnap.githubIPs, newSnap.githubIPs);
+
+    const oldRegions = oldSnap.regions || {};
+    const newRegions = newSnap.regions || {};
+    for (const key of Object.keys(oldRegions)) {
+        const o = oldRegions[key] || {};
+        const n = newRegions[key] || {};
+        if (!newRegions[key]) {
+            errors.push(`REGION_DATA.${key} would be removed entirely`);
+            continue;
+        }
+        checkArray(`REGION_DATA.${key}.actionsIPs`, o.actionsIPs, n.actionsIPs);
+        checkArray(`REGION_DATA.${key}.regionIPs`, o.regionIPs, n.regionIPs);
+    }
+    return errors;
+}
 
 function updateAppJS(snapshot) {
     console.log('Updating js/app.js with new IPs...');
@@ -263,6 +393,15 @@ async function main() {
         githubIPs,
         regions
     };
+
+    // Guardrail: never let a flaky scrape wipe out good data.
+    const dataLoss = detectDataLoss(oldSnapshot, newSnapshot);
+    if (dataLoss.length > 0) {
+        console.error('\n❌ Refusing to update — scrape would lose data:');
+        for (const e of dataLoss) console.error(`  - ${e}`);
+        console.error('\nKeeping last-known-good snapshot. Investigate the scraper or the docs page structure.');
+        process.exit(1);
+    }
 
     // Compare
     const changes = compareSnapshots(oldSnapshot, newSnapshot);
