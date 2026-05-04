@@ -418,9 +418,14 @@ async function main() {
             updates = JSON.parse(fs.readFileSync(UPDATES_PATH, 'utf8'));
         }
 
-        // Prepend new update entry
+        // Prepend new update entry. `kind: "auto"` flags this as a normal
+        // automated diff vs the previous snapshot. Operators can edit this
+        // file by hand to add `kind: "backfill"` (scraper improvement) or
+        // `kind: "manual"` (manual correction) plus a `note` field — those
+        // get rendered with a distinct badge in the UI. See README.
         updates.unshift({
             date: new Date().toISOString().split('T')[0],
+            kind: 'auto',
             changes
         });
 

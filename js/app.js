@@ -274,14 +274,28 @@
             const addedCount = update.changes ? update.changes.filter(c => c.type === 'added').length : 0;
             const removedCount = update.changes ? update.changes.filter(c => c.type === 'removed').length : 0;
 
+            // Optional `kind` and `note` fields let us distinguish between
+            // genuine docs changes and "backfill" entries (e.g. when the
+            // scraper is improved and starts capturing IPs that were always
+            // required but previously missed). See README "Recent Updates".
+            const kindBadge = update.kind === 'backfill'
+                ? '<span class="update-badge badge-backfill" title="Scraper improvement, not a docs change">backfill</span>'
+                : update.kind === 'manual'
+                    ? '<span class="update-badge badge-manual" title="Manually recorded">manual</span>'
+                    : '';
+            const noteHtml = update.note
+                ? `<div class="update-note">ℹ️ ${escapeHTML(update.note)}</div>`
+                : '';
+
             html += `
-                <div class="update-entry">
+                <div class="update-entry${update.kind ? ' kind-' + escapeHTML(update.kind) : ''}">
                     <div class="update-header" onclick="toggleUpdate(this)">
                         <div class="update-date">
                             <span class="update-date-icon">📅</span>
                             ${escapeHTML(update.date)}
                         </div>
                         <div class="update-summary">
+                            ${kindBadge}
                             ${addedCount > 0 ? `<span class="update-badge badge-added">+${addedCount} added</span>` : ''}
                             ${removedCount > 0 ? `<span class="update-badge badge-removed">-${removedCount} removed</span>` : ''}
                             <svg class="chevron" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -290,6 +304,7 @@
                         </div>
                     </div>
                     <div class="update-body">
+                        ${noteHtml}
                         <ul class="update-changes-list">`;
 
             if (update.changes) {

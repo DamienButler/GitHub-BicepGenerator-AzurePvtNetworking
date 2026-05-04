@@ -623,6 +623,35 @@ code {
     color: var(--accent-red);
 }
 
+.badge-backfill {
+    background: rgba(188, 140, 255, 0.15);
+    color: var(--accent-purple);
+}
+
+.badge-manual {
+    background: rgba(210, 153, 34, 0.15);
+    color: var(--accent-orange);
+}
+
+.update-note {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(88, 166, 255, 0.08);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.update-entry.kind-backfill {
+    border-left: 3px solid var(--accent-purple);
+}
+
+.update-entry.kind-manual {
+    border-left: 3px solid var(--accent-orange);
+}
+
 .update-body {
     display: none;
     padding: 0 18px 14px;

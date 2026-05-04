@@ -1,6 +1,8 @@
 [
   {
     "date": "2026-05-01",
+    "kind": "backfill",
+    "note": "Scraper improvement, not a docs change. The monitor was previously only reading the 'IP ranges for Azure private networking' subsection. After upgrading the scraper to also read the broader 'GitHub's IP addresses' per-region tables on the same docs page, these IPs were always required but had been silently missing from REGION_DATA. New baseline established.",
     "changes": [
       {
         "type": "added",
