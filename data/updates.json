@@ -1,5 +1,86 @@
 [
   {
+    "date": "2026-07-22",
+    "kind": "auto",
+    "changes": [
+      {
+        "type": "added",
+        "range": "108.143.197.160/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.123.214.144/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.224.46.160/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.240.194.224/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.240.220.176/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.240.211.224/28",
+        "source": "EU Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "4.237.73.144/28",
+        "source": "Australia Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.5.226.96/28",
+        "source": "Australia Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "20.248.163.160/28",
+        "source": "Australia Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "74.226.88.224/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "40.81.178.160/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "added",
+        "range": "4.190.170.0/28",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "removed",
+        "range": "74.226.88.241/32",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "removed",
+        "range": "40.81.176.225/32",
+        "source": "Japan Region IPs"
+      },
+      {
+        "type": "removed",
+        "range": "4.190.169.240/32",
+        "source": "Japan Region IPs"
+      }
+    ]
+  },
+  {
     "date": "2026-05-01",
     "kind": "backfill",
     "note": "Scraper improvement, not a docs change. The monitor was previously only reading the 'IP ranges for Azure private networking' subsection. After upgrading the scraper to also read the broader 'GitHub's IP addresses' per-region tables on the same docs page, these IPs were always required but had been silently missing from REGION_DATA. New baseline established.",
